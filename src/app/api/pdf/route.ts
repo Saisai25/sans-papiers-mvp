@@ -45,17 +45,19 @@ export async function GET(req: NextRequest) {
       t,
     });
 
-    // ✅ Convertit Uint8Array -> ArrayBuffer avec slice pour ne récupérer que la vue
-    const ab: ArrayBuffer = pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength);
+   // ✅ Convertir Uint8Array -> ArrayBuffer SANS utiliser .buffer (évite SharedArrayBuffer)
+const ab = new ArrayBuffer(pdf.byteLength);
+new Uint8Array(ab).set(pdf);
 
-    return new NextResponse(ab, {
-      status: 200,
-      headers: {
-        "content-type": "application/pdf",
-        "content-disposition": `attachment; filename="decision-${c.id}.pdf"`,
-        "cache-control": "no-store",
-      },
-    });
+return new NextResponse(ab, {
+  status: 200,
+  headers: {
+    "content-type": "application/pdf",
+    "content-disposition": `attachment; filename="decision-${c.id}.pdf"`,
+    "cache-control": "no-store",
+  },
+});
+
   } catch (e) {
     console.error(e);
     return NextResponse.json({ ok: false, error: "PDF_FAILED" }, { status: 500 });

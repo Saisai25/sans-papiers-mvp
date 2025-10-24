@@ -45,9 +45,10 @@ export async function GET(req: NextRequest) {
       t,
     });
 
-    // ✅ Envelopper le Uint8Array dans un Blob pour satisfaire BodyInit
-    const blob = new Blob([pdf], { type: "application/pdf" });
-    return new NextResponse(blob, {
+    // ✅ Convertit Uint8Array -> ArrayBuffer avec slice pour ne récupérer que la vue
+    const ab: ArrayBuffer = pdf.buffer.slice(pdf.byteOffset, pdf.byteOffset + pdf.byteLength);
+
+    return new NextResponse(ab, {
       status: 200,
       headers: {
         "content-type": "application/pdf",
@@ -60,6 +61,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "PDF_FAILED" }, { status: 500 });
   }
 }
+
 
 
 

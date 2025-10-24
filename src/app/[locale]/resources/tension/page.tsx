@@ -86,7 +86,12 @@ export default async function TensionPage({
   }
 
   // 3) Déterminer le département : query ?dept=… prioritaire, sinon réponse enregistrée
-  const answers = Object.fromEntries(c.answers.map((a) => [a.questionId, a.value])) as Record<string, string>;
+  const answers = (c.answers as Array<{ questionId: string; value: string }>)
+  .reduce<Record<string, string>>((acc, a) => {
+    acc[a.questionId] = a.value;
+    return acc;
+  }, {});
+
   const dept = (deptParam || answers["work_department"] || answers["department"] || "").trim();
 
   const resource =

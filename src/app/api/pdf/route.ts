@@ -29,31 +29,25 @@ export async function GET(req: NextRequest) {
 
     const t: Dict = await getDictionary(locale);
 
-    const payload = {
+    const pdf = await buildPdf({
       c: {
         id: c.id,
         status: c.status as "draft" | "paid" | "closed",
         createdAt: c.createdAt,
-        answers: (c.answers as AnswerRow[]).map((a: AnswerRow) => ({
+        answers: (c.answers as AnswerRow[]).map((a) => ({
           questionId: a.questionId,
           value: a.value,
         })),
         decision: c.decision
-          ? {
-              pathway: c.decision.pathway,
-              citations: c.decision.citations,
-            }
+          ? { pathway: c.decision.pathway, citations: c.decision.citations }
           : null,
       },
       t,
-    };
+    });
 
-    const pdf = await buildPdf(payload);
-    if (!pdf || !(pdf instanceof Uint8Array)) {
-      return NextResponse.json({ ok: false, error: "PDF_BUILD_FAILED" }, { status: 500 });
-    }
-
-    return new NextResponse(pdf, {
+    // ✅ Envelopper le Uint8Array dans un Blob pour satisfaire BodyInit
+    const blob = new Blob([pdf], { type: "application/pdf" });
+    return new NextResponse(blob, {
       status: 200,
       headers: {
         "content-type": "application/pdf",
@@ -66,6 +60,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "PDF_FAILED" }, { status: 500 });
   }
 }
+
 
 
 

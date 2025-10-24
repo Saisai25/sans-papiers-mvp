@@ -8,6 +8,16 @@ function isAdmin(req: NextRequest): boolean {
   return tok.length > 0 && hdr === tok;
 }
 
+type Item = {
+  id: string;
+  status: "draft" | "paid" | "closed" | string;
+  locale: string;
+  createdAt: Date;
+  updatedAt: Date;
+  accessCode: string | null;
+  decision: { pathway: string | null } | null;
+};
+
 export async function GET(req: NextRequest) {
   try {
     if (!isAdmin(req)) {
@@ -20,13 +30,11 @@ export async function GET(req: NextRequest) {
     const q = url.searchParams.get("q") || "";
     const code = url.searchParams.get("code") || "";
 
-    // where de base
     const base: Record<string, unknown> = {};
     if (status) base.status = status;
     if (locale) base.locale = locale;
-    if (code) base.accessCode = code; // recherche exacte par code d’accès
+    if (code) base.accessCode = code;
 
-    // OR pour recherche libre (id / decision.pathway)
     const or: Array<Record<string, unknown>> = [];
     if (q) {
       or.push(
@@ -37,7 +45,7 @@ export async function GET(req: NextRequest) {
 
     const where = { ...base, ...(or.length ? { OR: or } : {}) };
 
-    const items = await prisma.case.findMany({
+    const items = (await prisma.case.findMany({
       where,
       select: {
         id: true,
@@ -50,9 +58,9 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
       take: 200,
-    });
+    })) as Item[];
 
-    const mapped = items.map((c) => ({
+    const mapped = items.map((c: Item) => ({
       id: c.id,
       status: c.status as "draft" | "paid" | "closed",
       locale: c.locale,
@@ -68,6 +76,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "LIST_FAILED" }, { status: 500 });
   }
 }
+
 
 
 

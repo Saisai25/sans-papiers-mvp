@@ -1,0 +1,54 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Case {
+  id         String     @id @default(cuid())
+  locale     String     @default("fr")
+  status     String     @default("draft") // draft | paid | closed
+  codeHash   String?    // hash du code d’accès (6 chiffres), plus tard
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  answers    Answer[]
+  decision   Decision?
+  documents  Document[]
+  accessCode String?  @unique
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  caseId     String
+  questionId String
+  value      String
+  createdAt  DateTime @default(now())
+
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+model Decision {
+  id          String   @id @default(cuid())
+  caseId      String   @unique
+  ruleVersion String   @default("v1")
+  pathway     String   // "asile" | "vie_privee_familiale" | "insuffisant"
+  citations   String   // JSON string: ["..."]
+  createdAt   DateTime @default(now())
+
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  caseId    String
+  type      String   // "recap-pdf" etc.
+  url       String
+  createdAt DateTime @default(now())
+
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}

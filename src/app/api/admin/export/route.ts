@@ -8,6 +8,16 @@ function isAdmin(req: NextRequest): boolean {
   return tok.length > 0 && hdr === tok;
 }
 
+type Item = {
+  id: string;
+  status: "draft" | "paid" | "closed" | string;
+  locale: string;
+  createdAt: Date;
+  updatedAt: Date;
+  accessCode: string | null;
+  decision: { pathway: string | null } | null;
+};
+
 export async function GET(req: NextRequest) {
   try {
     if (!isAdmin(req)) {
@@ -15,10 +25,10 @@ export async function GET(req: NextRequest) {
     }
 
     const url = new URL(req.url);
-    const status = url.searchParams.get("status") || undefined; // optionnel: filtrage par statut
-    const locale = url.searchParams.get("locale") || undefined; // optionnel: filtrage par locale
+    const status = url.searchParams.get("status") || undefined;
+    const locale = url.searchParams.get("locale") || undefined;
 
-    const items = await prisma.case.findMany({
+    const items = (await prisma.case.findMany({
       where: {
         ...(status ? { status } : {}),
         ...(locale ? { locale } : {}),
@@ -33,8 +43,8 @@ export async function GET(req: NextRequest) {
         decision: { select: { pathway: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 2000, // limite large
-    });
+      take: 2000,
+    })) as Item[];
 
     const header = [
       "id",
@@ -46,7 +56,7 @@ export async function GET(req: NextRequest) {
       "decision.pathway",
     ];
 
-    const rows = items.map((c) => [
+    const rows = items.map((c: Item) => [
       c.id,
       c.status,
       c.locale,
@@ -62,15 +72,13 @@ export async function GET(req: NextRequest) {
           r
             .map((cell) => {
               const s = (cell ?? "").toString();
-              // CSV safe: doublage des guillemets + encadrement si virgule
-              const safe = `"${s.replace(/"/g, '""')}"`;
-              return safe;
+              return `"${s.replace(/"/g, '""')}"`;
             })
             .join(",")
         )
         .join("\n");
 
-    const csv = toCsv([header, ...rows]);
+    const csv = toCsv([header, ...(rows as unknown as string[][])]);
     return new NextResponse(csv, {
       status: 200,
       headers: {
@@ -84,3 +92,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "EXPORT_FAILED" }, { status: 500 });
   }
 }
+
